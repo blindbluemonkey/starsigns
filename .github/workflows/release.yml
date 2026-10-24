@@ -4,6 +4,11 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to release (e.g. v1.1)'
+        required: true
+        default: 'v1.0'
 
 permissions:
   contents: write
@@ -11,6 +16,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ github.event.inputs.version || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,7 +34,7 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
-          cp app/build/outputs/apk/release/app-release.apk "StarSigns-${GITHUB_REF_NAME}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "StarSigns-${VERSION}.apk"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -35,10 +42,11 @@ jobs:
           path: StarSigns-*.apk
 
       - name: Publish GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          name: Star Signs ${{ github.ref_name }}
+          tag_name: ${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: Star Signs ${{ env.VERSION }}
           files: StarSigns-*.apk
           body: |
             **Install:** download the APK on your Android phone (8.0 or later), open it, and allow installs from unknown sources when asked.
