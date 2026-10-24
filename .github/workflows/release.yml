@@ -1,0 +1,48 @@
+name: Build & release APK
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk "StarSigns-${GITHUB_REF_NAME}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StarSigns-apk
+          path: StarSigns-*.apk
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Star Signs ${{ github.ref_name }}
+          files: StarSigns-*.apk
+          body: |
+            **Install:** download the APK on your Android phone (8.0 or later), open it, and allow installs from unknown sources when asked.
+
+            **Use it:** point the phone at the night sky. The star sign nearest the centre of the screen lights up. If the drawing doesn't quite sit on the real stars, drag it into place.
+
+            **Privacy:** the app has no internet permission. Camera and location are only used on the phone.
